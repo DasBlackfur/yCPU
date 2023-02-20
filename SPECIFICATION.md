@@ -6,7 +6,7 @@
 
 ## Introduction
 
-AbleCPU aims to provide a simple and reduced ISA, while also maintaining ease of use and flexibility.
+y_cpu aims to provide a simple and reduced ISA, while also maintaining ease of use and flexibility.
 One of the core concepts is, that *everything* is memory mapped.
 So there are no registers, no device bus and no special instructions to deal with them.
 NOTE: This version specifies a 8-bit CPU, but it is possible to extend it to 16-bit and 32-bit.

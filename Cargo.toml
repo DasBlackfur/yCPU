@@ -1,6 +1,6 @@
 [workspace]
 
 members = [
-    "ablecpu",
-    "ablecpu-cli",
+    "y_cpu",
+    "y_cpu-cli",
 ]

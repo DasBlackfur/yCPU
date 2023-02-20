@@ -1,6 +1,6 @@
 use std::{io::{self, Read}, fs::File};
 
-use ablecpu::CPU;
+use y_cpu::CPU;
 
 fn main() {
     let mut file = File::open("example.bin").unwrap();
