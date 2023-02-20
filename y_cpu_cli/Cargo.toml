@@ -1,5 +1,5 @@
 [package]
-name = "y_cpu-cli"
+name = "y_cpu_cli"
 version = "0.1.0"
 edition = "2021"
 

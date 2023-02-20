@@ -2,5 +2,5 @@
 
 members = [
     "y_cpu",
-    "y_cpu-cli",
+    "y_cpu_cli",
 ]
