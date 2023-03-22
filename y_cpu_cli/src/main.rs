@@ -1,4 +1,7 @@
-use std::{io::{self, Read}, fs::File};
+use std::{
+    fs::File,
+    io::{self, Read},
+};
 
 use y_cpu::CPU;
 
@@ -9,8 +12,6 @@ fn main() {
     file.read(&mut binary).unwrap();
 
     let mut cpu = CPU::new(binary, Vec::new());
-
-    
 
     loop {
         println!("Next Instruction: {:?}", cpu.fetch());
