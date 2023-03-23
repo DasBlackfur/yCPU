@@ -10,21 +10,33 @@ pub struct CPU {
 pub struct Banker<T> {
     pub content: [T; 256],
     pub pointer: u8,
-    pub controller_device: BankerController
+    pub controller_device: BankerController,
 }
 
-pub struct BankerController;
+pub struct BankerController {
+    address: u8,
+}
 
 impl Device for BankerController {
-    
+    fn load(&mut self) -> u8 {
+        todo!()
+    }
+
+    fn push(&mut self) {
+        todo!()
+    }
+
+    fn address(&self) -> u8 {
+        self.address
+    }
 }
 
 impl<T: std::marker::Copy + Index<usize>> Banker<T> {
-    pub fn new(content: T) -> Banker<T> {
+    pub fn new(content: T, address: u8) -> Banker<T> {
         Banker {
             content: [content; 256],
             pointer: 0,
-            controller_device: BankerController,
+            controller_device: BankerController { address },
         }
     }
 }
@@ -55,14 +67,18 @@ impl<T: IndexMut<Range<usize>>> IndexMut<Range<usize>> for Banker<T> {
     }
 }
 
-
 impl CPU {
     pub fn new(inst_mem: [u8; 127], devices: Vec<Box<dyn Device>>) -> CPU {
+        let mut mapped_devices = Vec::with_capacity(64);
+        for device in devices.into_iter() {
+            let address = device.address() as usize - 192;
+            mapped_devices[address] = device;
+        }
         CPU {
             reg_zero: 0,
-            inst_mem: Banker::new(inst_mem),
-            data_mem: Banker::new([0; 64]),
-            devices,
+            inst_mem: Banker::new(inst_mem, 192),
+            data_mem: Banker::new([0; 64], 193),
+            devices: mapped_devices,
         }
     }
 
@@ -253,6 +269,9 @@ impl CPU {
 }
 
 pub trait Device {
+    fn load(&mut self) -> u8;
+    fn push(&mut self);
+    fn address(&self) -> u8;
 }
 
 #[derive(Debug)]
