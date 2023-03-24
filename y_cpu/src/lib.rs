@@ -1,4 +1,4 @@
-use std::ops::{Index, IndexMut, Range};
+use std::{ops::{Index, IndexMut, Range}};
 
 pub struct CPU {
     pub reg_zero: u8,
@@ -10,33 +10,13 @@ pub struct CPU {
 pub struct Banker<T> {
     pub content: [T; 256],
     pub pointer: u8,
-    pub controller_device: BankerController,
-}
-
-pub struct BankerController {
-    address: u8,
-}
-
-impl Device for BankerController {
-    fn load(&mut self) -> u8 {
-        todo!()
-    }
-
-    fn push(&mut self) {
-        todo!()
-    }
-
-    fn address(&self) -> u8 {
-        self.address
-    }
 }
 
 impl<T: std::marker::Copy + Index<usize>> Banker<T> {
-    pub fn new(content: T, address: u8) -> Banker<T> {
+    pub fn new(content: T) -> Banker<T> {
         Banker {
             content: [content; 256],
             pointer: 0,
-            controller_device: BankerController { address },
         }
     }
 }
@@ -69,15 +49,15 @@ impl<T: IndexMut<Range<usize>>> IndexMut<Range<usize>> for Banker<T> {
 
 impl CPU {
     pub fn new(inst_mem: [u8; 127], devices: Vec<Box<dyn Device>>) -> CPU {
-        let mut mapped_devices = Vec::with_capacity(64);
+        let mut mapped_devices = Vec::with_capacity(62);
         for device in devices.into_iter() {
-            let address = device.address() as usize - 192;
+            let address = device.address() as usize - 194;
             mapped_devices[address] = device;
         }
         CPU {
             reg_zero: 0,
-            inst_mem: Banker::new(inst_mem, 192),
-            data_mem: Banker::new([0; 64], 193),
+            inst_mem: Banker::new(inst_mem),
+            data_mem: Banker::new([0; 64]),
             devices: mapped_devices,
         }
     }
@@ -253,6 +233,8 @@ impl CPU {
             0 => self.reg_zero,
             1..=127 => self.inst_mem[addr as usize],
             128..=191 => self.data_mem[(addr - 128) as usize],
+            192 => self.inst_mem.pointer,
+            193 => self.data_mem.pointer,
             _ => panic!("Invalid address: {}", addr),
         }
     }
@@ -263,14 +245,16 @@ impl CPU {
             0 => self.reg_zero = data,
             1..=127 => self.inst_mem[addr as usize] = data,
             128..=191 => self.data_mem[(addr - 128) as usize] = data,
+            192 => self.inst_mem.pointer = data,
+            193 => self.data_mem.pointer = data,
             _ => panic!("Invalid address: {}", addr),
         }
     }
 }
 
 pub trait Device {
-    fn load(&mut self) -> u8;
-    fn push(&mut self);
+    fn load(&mut self, addr: u8) -> u8;
+    fn push(&mut self, addr: u8, data: u8);
     fn address(&self) -> u8;
 }
 
