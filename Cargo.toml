@@ -3,4 +3,5 @@
 members = [
     "y_cpu",
     "y_cpu_cli",
+    "y_cpu_assembler"
 ]

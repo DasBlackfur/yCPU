@@ -1,4 +1,4 @@
-use std::{ops::{Index, IndexMut, Range}};
+use std::ops::{Index, IndexMut, Range};
 
 pub struct CPU {
     pub reg_zero: u8,

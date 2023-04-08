@@ -1,0 +1,12 @@
+// Example fibonachi program
+
+NOOP $loop #01
+COPY #02 #80
+COPY #02 #81
+$unused
+$loop
+COPY #80 #82
+ADD  #81 #80
+COPY #81 #82
+ADD  #80 #81
+COPY #01 #00
