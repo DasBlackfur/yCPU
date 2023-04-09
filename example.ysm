@@ -1,4 +1,4 @@
-// Example fibonachi program
+// Example fibonacci program
 
 NOOP $loop #01
 COPY #02 #80
