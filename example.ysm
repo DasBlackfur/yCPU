@@ -1,6 +1,7 @@
 // Example fibonacci program
 
 NOOP $loop #01
+NOOP $unused +0A $unused -01
 COPY #02 #80
 COPY #02 #81
 $unused

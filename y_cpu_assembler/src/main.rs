@@ -1,7 +1,5 @@
 use std::{collections::HashMap, env, fs};
 
-pub enum AssemblerOptions {}
-
 #[derive(Debug, Clone)]
 pub struct Instruction {
     code: OpCode,
@@ -13,7 +11,7 @@ pub struct Instruction {
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub enum Symbol {
     Resolved(u8),
-    UnResolved(String),
+    UnResolved(String, i8),
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -78,8 +76,21 @@ impl Instruction {
                 }
                 // Ideally we would not panic here but return `None` / an appropriate error
                 "#" => args.push(Symbol::Resolved(u8::from_str_radix(value, 16).unwrap())),
-                "$" => args.push(Symbol::UnResolved(value.to_owned())),
-                _ => (), // could return `None` here depending on the exact ysm grammar
+                "$" => {
+                    args.push(Symbol::UnResolved(value.to_owned(), 0))
+                },
+                "+" | "-" => {
+                    match args.last_mut() {
+                        Some(arg) => match arg {
+                            Symbol::Resolved(_) => return None,
+                            Symbol::UnResolved(_, offset) => {
+                                *offset += i8::from_str_radix(&(prefix.to_owned() + value), 16).unwrap();
+                            },
+                        },
+                        None => return None,
+                    }
+                }
+                _ => return None,
             }
         }
 
@@ -130,16 +141,16 @@ impl Symbol {
     pub fn address(&self) -> u8 {
         match self {
             Symbol::Resolved(addr) => *addr,
-            Symbol::UnResolved(name) => panic!("Unresolvable symbol {name}"),
+            Symbol::UnResolved(name, _) => panic!("Unresolvable symbol {name}"),
         }
     }
 
     fn resolve(&mut self, lookup: &SymbolTable<'_>) -> bool {
         match self {
             Symbol::Resolved(_) => true,
-            Symbol::UnResolved(name) => {
+            Symbol::UnResolved(name, offset) => {
                 if let Some(addr) = lookup.get(name.as_str()) {
-                    *self = Symbol::Resolved(*addr);
+                    *self = Symbol::Resolved(((*addr as i16) + (*offset as i16)) as u8);
                     true
                 } else {
                     false
