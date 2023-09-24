@@ -9,7 +9,7 @@ fn main() {
     let mut file = File::open("example.bin").unwrap();
     let mut binary = [0_u8; 127];
 
-    file.read(&mut binary).unwrap();
+    file.read_exact(&mut binary).unwrap();
 
     let mut cpu = CPU::new(binary, Vec::new());
 

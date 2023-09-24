@@ -1,4 +1,4 @@
-use std::{collections::HashMap, env, fs};
+use std::{env, fs};
 
 use y_cpu::{symbols::SymbolTable, Instruction};
 

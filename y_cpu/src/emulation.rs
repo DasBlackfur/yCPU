@@ -139,7 +139,7 @@ impl CPU {
     }
 
     fn load_double(&mut self, addr1: &Symbol, addr2: &Symbol) -> ((u8, u8), (u8, u8)) {
-        (self.load(&addr1), self.load(&addr2))
+        (self.load(addr1), self.load(addr2))
     }
 
     fn load_double_signed(
