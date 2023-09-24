@@ -3,7 +3,7 @@ use std::{
     io::{self, Read},
 };
 
-use y_cpu::CPU;
+use y_cpu::emulation::CPU;
 
 fn main() {
     let mut file = File::open("example.bin").unwrap();

@@ -76,20 +76,17 @@ impl Instruction {
                 }
                 // Ideally we would not panic here but return `None` / an appropriate error
                 "#" => args.push(Symbol::Resolved(u8::from_str_radix(value, 16).unwrap())),
-                "$" => {
-                    args.push(Symbol::UnResolved(value.to_owned(), 0))
+                "$" => args.push(Symbol::UnResolved(value.to_owned(), 0)),
+                "+" | "-" => match args.last_mut() {
+                    Some(arg) => match arg {
+                        Symbol::Resolved(_) => return None,
+                        Symbol::UnResolved(_, offset) => {
+                            *offset +=
+                                i8::from_str_radix(&(prefix.to_owned() + value), 16).unwrap();
+                        }
+                    },
+                    None => return None,
                 },
-                "+" | "-" => {
-                    match args.last_mut() {
-                        Some(arg) => match arg {
-                            Symbol::Resolved(_) => return None,
-                            Symbol::UnResolved(_, offset) => {
-                                *offset += i8::from_str_radix(&(prefix.to_owned() + value), 16).unwrap();
-                            },
-                        },
-                        None => return None,
-                    }
-                }
                 _ => return None,
             }
         }
