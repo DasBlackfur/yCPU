@@ -1,10 +1,15 @@
-use crate::{banking::Banker, devices::Device, Halted, Instruction};
+use crate::{banking::Banker, devices::Device, symbols::Symbol, Instruction, OpOptions};
 
 pub struct CPU {
     pub reg_zero: u8,
     pub inst_mem: Banker<[u8; 127]>,
     pub data_mem: Banker<[u8; 64]>,
     pub devices: Vec<Box<dyn Device>>,
+}
+
+pub enum Halted {
+    Running,
+    Halted,
 }
 
 impl CPU {
@@ -28,7 +33,7 @@ impl CPU {
     }
 
     pub fn fetch(&self) -> Instruction {
-        Instruction::from_3bytes([
+        Instruction::decode([
             self.inst_mem[self.reg_zero as usize],
             self.inst_mem[(self.reg_zero + 1) as usize],
             self.inst_mem[(self.reg_zero + 2) as usize],
@@ -36,178 +41,138 @@ impl CPU {
     }
 
     fn process(&mut self, inst: Instruction) -> Halted {
-        match inst {
-            Instruction::NoOp(_, _, _, _) => (),
-            Instruction::And(_, _, _, _, arg1, arg2) => {
-                let data1 = self.load(arg1);
-                let data2 = self.load(arg2);
-                self.push(arg1, data1 & data2);
+        use crate::OpCode::*;
+        let result: u8 = match inst.code {
+            NoOp => 0,
+            And => {
+                let ((data1, result1), (data2, result2)) = self.load_double(&inst.arg1, &inst.arg2);
+                let result3 = self.push(&inst.arg1, data1 & data2);
+                result1 | result2 << 1 | result3 << 2
             }
-            Instruction::Or(_, _, _, _, arg1, arg2) => {
-                let data1 = self.load(arg1);
-                let data2 = self.load(arg2);
-                self.push(arg1, data1 | data2);
+            Or => {
+                let ((data1, result1), (data2, result2)) = self.load_double(&inst.arg1, &inst.arg2);
+                let result3 = self.push(&inst.arg1, data1 | data2);
+                result1 | result2 << 1 | result3 << 2
             }
-            Instruction::Not(_, _, _, _, arg1) => {
-                let data1 = self.load(arg1);
-                self.push(arg1, !data1);
+            Not => {
+                let (data1, result1) = self.load(&inst.arg1);
+                let result3 = self.push(&inst.arg1, !data1);
+                result1 | result3 << 2
             }
-            Instruction::Add(_, _, sign1, sign2, arg1, arg2) => {
-                match (sign1, sign2) {
-                    (true, true) => {
-                        let data1 = i8::from_be_bytes([self.load(arg1)]);
-                        let data2 = i8::from_be_bytes([self.load(arg2)]);
-                        self.push(arg1, (data1 + data2) as u8);
-                    }
-                    (true, false) => {
-                        let data1 = i8::from_be_bytes([self.load(arg1)]);
-                        let data2 = self.load(arg2);
-                        self.push(arg1, (data1 as i16 + data2 as i16) as u8);
-                    }
-                    (false, true) => {
-                        let data1 = self.load(arg1);
-                        let data2 = i8::from_be_bytes([self.load(arg2)]);
-                        self.push(arg1, (data1 as i16 + data2 as i16) as u8);
-                    }
-                    (false, false) => {
-                        let data1 = self.load(arg1);
-                        let data2 = self.load(arg2);
-                        self.push(arg1, data1 + data2);
-                    }
-                };
+            Add => {
+                let ((data1, result1), (data2, result2)) = self.load_double_signed(&inst.arg1, &inst.arg2, &inst.options);
+                let result3 = self.push(&inst.arg1, (data1 + data2) as u8);
+                result1 | result2 << 1 | result3 << 2
             }
-            Instruction::Sub(_, _, sign1, sign2, arg1, arg2) => match (sign1, sign2) {
-                (true, true) => {
-                    let data1 = i8::from_be_bytes([self.load(arg1)]);
-                    let data2 = i8::from_be_bytes([self.load(arg2)]);
-                    self.push(arg1, (data1 - data2) as u8);
-                }
-                (true, false) => {
-                    let data1 = i8::from_be_bytes([self.load(arg1)]);
-                    let data2 = self.load(arg2);
-                    self.push(arg1, (data1 as i16 - data2 as i16) as u8);
-                }
-                (false, true) => {
-                    let data1 = self.load(arg1);
-                    let data2 = i8::from_be_bytes([self.load(arg2)]);
-                    self.push(arg1, (data1 as i16 - data2 as i16) as u8);
-                }
-                (false, false) => {
-                    let data1 = self.load(arg1);
-                    let data2 = self.load(arg2);
-                    self.push(arg1, data1 - data2);
-                }
+            Sub => {
+                let ((data1, result1), (data2, result2)) = self.load_double_signed(&inst.arg1, &inst.arg2, &inst.options);
+                let result3 = self.push(&inst.arg1, (data1 - data2) as u8);
+                result1 | result2 << 1 | result3 << 2
             },
-            Instruction::Mul(_, _, sign1, sign2, arg1, arg2) => match (sign1, sign2) {
-                (true, true) => {
-                    let data1 = i8::from_be_bytes([self.load(arg1)]);
-                    let data2 = i8::from_be_bytes([self.load(arg2)]);
-                    self.push(arg1, (data1 * data2) as u8);
-                }
-                (true, false) => {
-                    let data1 = i8::from_be_bytes([self.load(arg1)]);
-                    let data2 = self.load(arg2);
-                    self.push(arg1, (data1 as i16 * data2 as i16) as u8);
-                }
-                (false, true) => {
-                    let data1 = self.load(arg1);
-                    let data2 = i8::from_be_bytes([self.load(arg2)]);
-                    self.push(arg1, (data1 as i16 * data2 as i16) as u8);
-                }
-                (false, false) => {
-                    let data1 = self.load(arg1);
-                    let data2 = self.load(arg2);
-                    self.push(arg1, data1 * data2);
-                }
+            Mul => {
+                let ((data1, result1), (data2, result2)) = self.load_double_signed(&inst.arg1, &inst.arg2, &inst.options);
+                let result3 = self.push(&inst.arg1, (data1 * data2) as u8);
+                result1 | result2 << 1 | result3 << 2
             },
-            Instruction::Div(_, _, sign1, sign2, arg1, arg2) => match (sign1, sign2) {
-                (true, true) => {
-                    let data1 = i8::from_be_bytes([self.load(arg1)]);
-                    let data2 = i8::from_be_bytes([self.load(arg2)]);
-                    self.push(arg1, (data1 / data2) as u8);
-                }
-                (true, false) => {
-                    let data1 = i8::from_be_bytes([self.load(arg1)]);
-                    let data2 = self.load(arg2);
-                    self.push(arg1, (data1 as i16 / data2 as i16) as u8);
-                }
-                (false, true) => {
-                    let data1 = self.load(arg1);
-                    let data2 = i8::from_be_bytes([self.load(arg2)]);
-                    self.push(arg1, (data1 as i16 / data2 as i16) as u8);
-                }
-                (false, false) => {
-                    let data1 = self.load(arg1);
-                    let data2 = self.load(arg2);
-                    self.push(arg1, data1 / data2);
-                }
+            Div => {
+                let ((data1, result1), (data2, result2)) = self.load_double_signed(&inst.arg1, &inst.arg2, &inst.options);
+                let result3 = self.push(&inst.arg1, (data1 / data2) as u8);
+                result1 | result2 << 1 | result3 << 2
             },
-            Instruction::SL(_, _, _, _, arg1) => {
-                let data1 = self.load(arg1);
-                self.push(arg1, data1 << 1)
-            }
-            Instruction::SR(_, _, _, _, arg1) => {
-                let data1 = self.load(arg1);
-                self.push(arg1, data1 >> 1)
-            }
-            Instruction::RL(_, _, _, _, arg1) => {
-                let data1 = self.load(arg1);
-                self.push(arg1, u8::rotate_left(data1, 1));
-            }
-            Instruction::RR(_, _, _, _, arg1) => {
-                let data1 = self.load(arg1);
-                self.push(arg1, u8::rotate_right(data1, 1));
-            }
-            Instruction::Copy(_, _, _, _, arg1, arg2) => {
-                let data1 = self.load(arg1);
-                self.push(arg2, data1);
-            }
-            Instruction::CompEq(_, _, _, _, arg1, arg2) => {
-                let data1 = self.load(arg1);
-                let data2 = self.load(arg2);
+            SL => {
+                let (data1, result1) = self.load(&inst.arg1);
+                let result3 = self.push(&inst.arg1, data1 << 1);
+                result1 | result3 << 2
+            },
+            SR => {
+                let (data1, result1) = self.load(&inst.arg1);
+                let result3 = self.push(&inst.arg1, data1 >> 1);
+                result1 | result3 << 2
+            },
+            RL => {
+                let (data1, result1) = self.load(&inst.arg1);
+                let result3 = self.push(&inst.arg1, data1.rotate_left(1));
+                result1 | result3 << 2
+            },
+            RR => {
+                let (data1, result1) = self.load(&inst.arg1);
+                let result3 = self.push(&inst.arg1, data1.rotate_right(1));
+                result1 | result3 << 2
+            },
+            Copy => {
+                let (data1, result1) = self.load(&inst.arg1);
+                let result3 = self.push(&inst.arg2, data1);
+                result1 | result3 << 2
+            },
+            CompEq => {
+                let ((data1, result1), (data2, result2)) = self.load_double(&inst.arg1, &inst.arg2);
                 if data1 != data2 {
                     self.reg_zero += 3;
                 }
-            }
-            Instruction::CompGt(_, _, _, _, arg1, arg2) => {
-                let data1 = self.load(arg1);
-                let data2 = self.load(arg2);
+                result1 | result2 << 1
+            },
+            CompGt => {
+                let ((data1, result1), (data2, result2)) = self.load_double(&inst.arg1, &inst.arg2);
                 if data1 <= data2 {
                     self.reg_zero += 3;
                 }
-            }
-            Instruction::CompLt(_, _, _, _, arg1, arg2) => {
-                let data1 = self.load(arg1);
-                let data2 = self.load(arg2);
+                result1 | result2 << 1
+            },
+            CompLt => {
+                let ((data1, result1), (data2, result2)) = self.load_double(&inst.arg1, &inst.arg2);
                 if data1 >= data2 {
                     self.reg_zero += 3;
                 }
-            }
+                result1 | result2 << 1
+            },
         };
+        if inst.options.halt_on_error() && result != 0 {
+            return Halted::Halted;
+        }
+
         self.reg_zero += 3;
         Halted::Running
     }
 
-    fn load(&mut self, addr: u8) -> u8 {
-        match addr {
-            0 => self.reg_zero,
-            1..=127 => self.inst_mem[addr as usize],
-            128..=191 => self.data_mem[(addr - 128) as usize],
-            192 => self.inst_mem.pointer,
-            193 => self.data_mem.pointer,
-            _ => panic!("Invalid address: {}", addr),
+    fn load_double(&mut self, addr1: &Symbol, addr2: &Symbol) -> ((u8, u8), (u8, u8)) {
+        (self.load(&addr1), self.load(&addr2))
+    }
+
+    fn load_double_signed(&mut self, addr1: &Symbol, addr2: &Symbol, options: &OpOptions) -> ((i16, u8), (i16, u8)) {
+        let (data1, result1) = self.load(addr1);
+        let (data2, result2) = self.load(addr2);
+        let mut data1_signed = data1 as i16;
+        let mut data2_signed = data2 as i16;
+        if options.arg1_signed() {
+            data1_signed = i8::from_be_bytes([data1]) as i16;
+        }
+        if options.arg2_signed() {
+            data2_signed = i8::from_be_bytes([data2]) as i16;
+        }
+        ((data1_signed, result1), (data2_signed, result2))
+    }
+
+    fn load(&mut self, addr: &Symbol) -> (u8, u8) {
+        match addr.address() {
+            0 => (self.reg_zero, 0),
+            1..=127 => (self.inst_mem[addr.address() as usize], 0),
+            128..=191 => (self.data_mem[(addr.address() - 128) as usize], 0),
+            192 => (self.inst_mem.pointer, 0),
+            193 => (self.data_mem.pointer, 0),
+            _ => (0, 1),
         }
     }
 
-    fn push(&mut self, addr: u8, data: u8) {
-        println!("From push(): addr:{}, data:{}", addr, data);
-        match addr {
+    fn push(&mut self, addr: &Symbol, data: u8) -> u8 {
+        println!("From push(): addr:{}, data:{}", addr.address(), data);
+        match addr.address() {
             0 => self.reg_zero = data,
-            1..=127 => self.inst_mem[addr as usize] = data,
-            128..=191 => self.data_mem[(addr - 128) as usize] = data,
+            1..=127 => self.inst_mem[addr.address() as usize] = data,
+            128..=191 => self.data_mem[(addr.address() - 128) as usize] = data,
             192 => self.inst_mem.pointer = data,
             193 => self.data_mem.pointer = data,
-            _ => panic!("Invalid address: {}", addr),
+            _ => return 1,
         }
+        0
     }
 }
