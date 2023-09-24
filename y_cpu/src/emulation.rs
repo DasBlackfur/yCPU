@@ -60,71 +60,75 @@ impl CPU {
                 result1 | result3 << 2
             }
             Add => {
-                let ((data1, result1), (data2, result2)) = self.load_double_signed(&inst.arg1, &inst.arg2, &inst.options);
+                let ((data1, result1), (data2, result2)) =
+                    self.load_double_signed(&inst.arg1, &inst.arg2, &inst.options);
                 let result3 = self.push(&inst.arg1, (data1 + data2) as u8);
                 result1 | result2 << 1 | result3 << 2
             }
             Sub => {
-                let ((data1, result1), (data2, result2)) = self.load_double_signed(&inst.arg1, &inst.arg2, &inst.options);
+                let ((data1, result1), (data2, result2)) =
+                    self.load_double_signed(&inst.arg1, &inst.arg2, &inst.options);
                 let result3 = self.push(&inst.arg1, (data1 - data2) as u8);
                 result1 | result2 << 1 | result3 << 2
-            },
+            }
             Mul => {
-                let ((data1, result1), (data2, result2)) = self.load_double_signed(&inst.arg1, &inst.arg2, &inst.options);
+                let ((data1, result1), (data2, result2)) =
+                    self.load_double_signed(&inst.arg1, &inst.arg2, &inst.options);
                 let result3 = self.push(&inst.arg1, (data1 * data2) as u8);
                 result1 | result2 << 1 | result3 << 2
-            },
+            }
             Div => {
-                let ((data1, result1), (data2, result2)) = self.load_double_signed(&inst.arg1, &inst.arg2, &inst.options);
+                let ((data1, result1), (data2, result2)) =
+                    self.load_double_signed(&inst.arg1, &inst.arg2, &inst.options);
                 let result3 = self.push(&inst.arg1, (data1 / data2) as u8);
                 result1 | result2 << 1 | result3 << 2
-            },
+            }
             SL => {
                 let (data1, result1) = self.load(&inst.arg1);
                 let result3 = self.push(&inst.arg1, data1 << 1);
                 result1 | result3 << 2
-            },
+            }
             SR => {
                 let (data1, result1) = self.load(&inst.arg1);
                 let result3 = self.push(&inst.arg1, data1 >> 1);
                 result1 | result3 << 2
-            },
+            }
             RL => {
                 let (data1, result1) = self.load(&inst.arg1);
                 let result3 = self.push(&inst.arg1, data1.rotate_left(1));
                 result1 | result3 << 2
-            },
+            }
             RR => {
                 let (data1, result1) = self.load(&inst.arg1);
                 let result3 = self.push(&inst.arg1, data1.rotate_right(1));
                 result1 | result3 << 2
-            },
+            }
             Copy => {
                 let (data1, result1) = self.load(&inst.arg1);
                 let result3 = self.push(&inst.arg2, data1);
                 result1 | result3 << 2
-            },
+            }
             CompEq => {
                 let ((data1, result1), (data2, result2)) = self.load_double(&inst.arg1, &inst.arg2);
                 if data1 != data2 {
                     self.reg_zero += 3;
                 }
                 result1 | result2 << 1
-            },
+            }
             CompGt => {
                 let ((data1, result1), (data2, result2)) = self.load_double(&inst.arg1, &inst.arg2);
                 if data1 <= data2 {
                     self.reg_zero += 3;
                 }
                 result1 | result2 << 1
-            },
+            }
             CompLt => {
                 let ((data1, result1), (data2, result2)) = self.load_double(&inst.arg1, &inst.arg2);
                 if data1 >= data2 {
                     self.reg_zero += 3;
                 }
                 result1 | result2 << 1
-            },
+            }
         };
         if inst.options.halt_on_error() && result != 0 {
             return Halted::Halted;
@@ -138,7 +142,12 @@ impl CPU {
         (self.load(&addr1), self.load(&addr2))
     }
 
-    fn load_double_signed(&mut self, addr1: &Symbol, addr2: &Symbol, options: &OpOptions) -> ((i16, u8), (i16, u8)) {
+    fn load_double_signed(
+        &mut self,
+        addr1: &Symbol,
+        addr2: &Symbol,
+        options: &OpOptions,
+    ) -> ((i16, u8), (i16, u8)) {
         let (data1, result1) = self.load(addr1);
         let (data2, result2) = self.load(addr2);
         let mut data1_signed = data1 as i16;
