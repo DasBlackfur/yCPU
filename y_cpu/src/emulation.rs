@@ -109,21 +109,21 @@ impl CPU {
                 result1 | result3 << 2
             }
             CompEq => {
-                let ((data1, result1), (data2, result2)) = self.load_double(&inst.arg1, &inst.arg2);
+                let ((data1, result1), (data2, result2)) = self.load_double_signed(&inst.arg1, &inst.arg2, &inst.options);
                 if data1 != data2 {
                     self.reg_zero += 3;
                 }
                 result1 | result2 << 1
             }
             CompGt => {
-                let ((data1, result1), (data2, result2)) = self.load_double(&inst.arg1, &inst.arg2);
+                let ((data1, result1), (data2, result2)) = self.load_double_signed(&inst.arg1, &inst.arg2, &inst.options);
                 if data1 <= data2 {
                     self.reg_zero += 3;
                 }
                 result1 | result2 << 1
             }
             CompLt => {
-                let ((data1, result1), (data2, result2)) = self.load_double(&inst.arg1, &inst.arg2);
+                let ((data1, result1), (data2, result2)) = self.load_double_signed(&inst.arg1, &inst.arg2, &inst.options);
                 if data1 >= data2 {
                     self.reg_zero += 3;
                 }
